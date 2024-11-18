@@ -1,0 +1,14 @@
+{{- if .Values.staticIP }}
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: rhel9-net
+  namespace: default
+spec:
+  config: >-
+    {"cniVersion":"0.3.1",
+    "type":"ovn-k8s-cni-overlay",
+    "topology":"layer2","name": "rhel9-net",
+     "netAttachDefName": "default/rhel9-net"}
+{{- end }}

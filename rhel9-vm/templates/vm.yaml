@@ -1,0 +1,88 @@
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: {{ include "rhel9-vm.fullname" . }}
+  labels:
+    {{- include "rhel9-vm.labels" . | nindent 4 }}
+spec:
+  running: true
+  template:
+    metadata:
+      annotations:
+        vm.kubevirt.io/flavor: small
+        vm.kubevirt.io/os: rhel9
+        vm.kubevirt.io/workload: server
+      labels:
+        kubevirt.io/domain: {{ include "rhel9-vm.fullname" . }}
+        kubevirt.io/size: medium
+        {{- include "rhel9-vm.labels" . | nindent 8 }}
+    spec:
+      domain:
+        devices:
+          disks:
+          - name: rootdisk
+            disk:
+              bus: virtio
+          - name: cloudinitdisk
+            disk:
+              bus: virtio
+          interfaces:
+          - name: default
+            masquerade: {}
+          {{- if .Values.staticIP }}
+          - bridge: {}
+            name: nic-secondary
+          {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+      networks:
+      - name: default
+        pod: {}
+        {{- if .Values.staticIP }}
+      - multus:
+          networkName: default/rhel9-net
+        name: nic-secondary
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+      - name: rootdisk
+        dataVolume:
+          name: {{ include "rhel9-vm.fullname" . }}
+      - name: cloudinitdisk
+        cloudInitNoCloud:
+          userData: |-
+            #cloud-config
+            user: cloud-user
+            password: openshift
+            chpasswd: { expire: False }
+            ssh_pwauth: true
+            {{- if .Values.staticIP }}
+            bootcmd:
+            - nmcli connection modify "Wired connection 1" ipv4.addresses {{ .Values.staticIP }} ipv4.method manual
+            - nmcli dev reapply eth1
+            {{- end }}
+      accessCredentials:
+      - sshPublicKey:
+          propagationMethod:
+            noCloud: {}
+          source:
+            secret:
+              secretName: {{ include "rhel9-vm.fullname" . }}
+  dataVolumeTemplates:
+  - metadata:
+      name: {{ include "rhel9-vm.fullname" . }}
+    spec:
+      sourceRef:
+        kind: DataSource
+        name: rhel9
+        namespace: openshift-virtualization-os-images
+      storage:
+        resources: {}
