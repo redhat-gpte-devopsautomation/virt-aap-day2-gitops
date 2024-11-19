@@ -5,6 +5,8 @@
 nameOverride: ""
 fullnameOverride: ""
 
+namespace: "vms-aap-day2"
+
 resources:
   requests:
     memory: 2Gi

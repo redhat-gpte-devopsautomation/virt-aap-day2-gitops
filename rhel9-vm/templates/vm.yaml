@@ -3,6 +3,7 @@ apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
   name: {{ include "rhel9-vm.fullname" . }}
+  namespace: {{ .Values.namespace }}
   labels:
     {{- include "rhel9-vm.labels" . | nindent 4 }}
 spec:
