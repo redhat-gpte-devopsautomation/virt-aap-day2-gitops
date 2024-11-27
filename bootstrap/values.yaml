@@ -1,0 +1,24 @@
+# Default values for bootstrap.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+vms:
+- name: rhel9-vm1
+  namespace: vms-aap-day2
+  resources:
+    requests:
+      cpu: '1'
+      memory: 2Gi
+  sshPublicKey: ssh-public-key-base64-string
+  nodeSelector: {}
+  tolerations: []
+  staticIP: ""
+  # staticIP: "10.10.10.30/24"
+- name: rhel9-vm2
+  namespace: vms-aap-day2
+  sshPublicKey: ssh-public-key-base64-string
+
+webterminal:
+  repoURL: https://github.com/rhpds/ocp-cluster-addons
+  targetRevision: main
+  path: webterminal

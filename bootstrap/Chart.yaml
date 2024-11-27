@@ -1,6 +1,6 @@
 apiVersion: v2
-name: rhel9-vm
-description: A Helm to deploy a RHEL 9 Kubevirt VM
+name: bootstrap
+description: Bootstrap Virt AAP Day2 GitOps
 
 # A chart can be either an 'application' or a 'library' chart.
 #

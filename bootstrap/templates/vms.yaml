@@ -1,11 +1,43 @@
+{{- range .Values.vms }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .namespace }}
+  annotations:
+    openshift.io/description: "Virtual Machines AAP Day 2"
+    openshift.io/display-name: "VMs AAP Day 2"
+---
+kind: Secret
+apiVersion: v1
+metadata:
+  name: {{ .name }}
+  namespace: {{ .namespace }}
+type: Opaque
+data:
+  key: {{ .sshPublicKey }}
+{{- if .staticIP }}
+---
+apiVersion: k8s.cni.cncf.io/v1
+kind: NetworkAttachmentDefinition
+metadata:
+  name: rhel9-net
+  namespace: default
+spec:
+  config: >-
+    {"cniVersion":"0.3.1",
+    "type":"ovn-k8s-cni-overlay",
+    "topology":"layer2","name": "rhel9-net",
+     "netAttachDefName": "default/rhel9-net"}
+{{- end }}
 ---
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: {{ include "rhel9-vm.fullname" . }}
-  namespace: {{ .Values.namespace }}
+  name: {{ .name }}
+  namespace: {{ .namespace }}
   labels:
-    {{- include "rhel9-vm.labels" . | nindent 4 }}
+    app.kubernetes.io/name: {{ .name }}
 spec:
   running: true
   template:
@@ -15,9 +47,9 @@ spec:
         vm.kubevirt.io/os: rhel9
         vm.kubevirt.io/workload: server
       labels:
-        kubevirt.io/domain: {{ include "rhel9-vm.fullname" . }}
+        kubevirt.io/domain: {{ .name }}
         kubevirt.io/size: medium
-        {{- include "rhel9-vm.labels" . | nindent 8 }}
+        app.kubernetes.io/name: {{ .name }}
     spec:
       domain:
         devices:
@@ -31,32 +63,32 @@ spec:
           interfaces:
           - name: default
             masquerade: {}
-          {{- if .Values.staticIP }}
+          {{- if .staticIP }}
           - bridge: {}
             name: nic-secondary
           {{- end }}
         resources:
-          {{- toYaml .Values.resources | nindent 10 }}
+          {{- toYaml (.resources | default (dict "requests" (dict "cpu" "1" "memory" "2Gi"))) | nindent 10 }}
       networks:
       - name: default
         pod: {}
-        {{- if .Values.staticIP }}
+        {{- if .staticIP }}
       - multus:
           networkName: default/rhel9-net
         name: nic-secondary
       {{- end }}
-      {{- with .Values.nodeSelector }}
+      {{- with .nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.tolerations }}
+      {{- with .tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       volumes:
       - name: rootdisk
         dataVolume:
-          name: {{ include "rhel9-vm.fullname" . }}
+          name: {{ .name }}
       - name: cloudinitdisk
         cloudInitNoCloud:
           userData: |-
@@ -65,9 +97,9 @@ spec:
             password: openshift
             chpasswd: { expire: False }
             ssh_pwauth: true
-            {{- if .Values.staticIP }}
+            {{- if .staticIP }}
             bootcmd:
-            - nmcli connection modify "Wired connection 1" ipv4.addresses {{ .Values.staticIP }} ipv4.method manual
+            - nmcli connection modify "Wired connection 1" ipv4.addresses {{ .staticIP }} ipv4.method manual
             - nmcli dev reapply eth1
             {{- end }}
       accessCredentials:
@@ -76,10 +108,10 @@ spec:
             noCloud: {}
           source:
             secret:
-              secretName: {{ include "rhel9-vm.fullname" . }}
+              secretName: {{ .name }}
   dataVolumeTemplates:
   - metadata:
-      name: {{ include "rhel9-vm.fullname" . }}
+      name: {{ .name }}
     spec:
       sourceRef:
         kind: DataSource
@@ -87,3 +119,4 @@ spec:
         namespace: openshift-virtualization-os-images
       storage:
         resources: {}
+{{- end }}
