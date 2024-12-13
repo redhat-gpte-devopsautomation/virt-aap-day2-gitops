@@ -5,15 +5,9 @@
 vms:
 - name: rhel9-vm1
   namespace: vms-aap-day2
-  resources:
-    requests:
-      cpu: '1'
-      memory: 2Gi
   sshPublicKey: ssh-public-key-base64-string
   nodeSelector: {}
   tolerations: []
-  staticIP: ""
-  # staticIP: "10.10.10.30/24"
 - name: rhel9-vm2
   namespace: vms-aap-day2
   sshPublicKey: ssh-public-key-base64-string

@@ -16,20 +16,6 @@ metadata:
 type: Opaque
 data:
   key: {{ .sshPublicKey }}
-{{- if .staticIP }}
----
-apiVersion: k8s.cni.cncf.io/v1
-kind: NetworkAttachmentDefinition
-metadata:
-  name: rhel9-net
-  namespace: default
-spec:
-  config: >-
-    {"cniVersion":"0.3.1",
-    "type":"ovn-k8s-cni-overlay",
-    "topology":"layer2","name": "rhel9-net",
-     "netAttachDefName": "default/rhel9-net"}
-{{- end }}
 ---
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
@@ -39,44 +25,27 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ .name }}
 spec:
+  instancetype:
+    name: u1.small
+  preference:
+    name: rhel.9
   running: true
   template:
     metadata:
-      annotations:
-        vm.kubevirt.io/flavor: small
-        vm.kubevirt.io/os: rhel9
-        vm.kubevirt.io/workload: server
       labels:
-        kubevirt.io/domain: {{ .name }}
-        kubevirt.io/size: medium
-        app.kubernetes.io/name: {{ .name }}
+        network.kubevirt.io/headlessService: headless
     spec:
       domain:
         devices:
-          disks:
-          - name: rootdisk
-            disk:
-              bus: virtio
-          - name: cloudinitdisk
-            disk:
-              bus: virtio
+          autoattachPodInterface: false
+          disks: []
           interfaces:
           - name: default
             masquerade: {}
-          {{- if .staticIP }}
-          - bridge: {}
-            name: nic-secondary
-          {{- end }}
-        resources:
-          {{- toYaml (.resources | default (dict "requests" (dict "cpu" "1" "memory" "2Gi"))) | nindent 10 }}
       networks:
-      - name: default
-        pod: {}
-        {{- if .staticIP }}
-      - multus:
-          networkName: default/rhel9-net
-        name: nic-secondary
-      {{- end }}
+        - name: default
+          pod: {}
+      subdomain: headless
       {{- with .nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -93,15 +62,11 @@ spec:
         cloudInitNoCloud:
           userData: |-
             #cloud-config
-            user: cloud-user
+            user: rhel
             password: openshift
-            chpasswd: { expire: False }
+            chpasswd:
+              expire: false
             ssh_pwauth: true
-            {{- if .staticIP }}
-            bootcmd:
-            - nmcli connection modify "Wired connection 1" ipv4.addresses {{ .staticIP }} ipv4.method manual
-            - nmcli dev reapply eth1
-            {{- end }}
       accessCredentials:
       - sshPublicKey:
           propagationMethod:
