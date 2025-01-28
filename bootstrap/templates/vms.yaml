@@ -30,6 +30,7 @@ spec:
   preference:
     name: rhel.9
   running: true
+  runStrategy: Manual
   template:
     metadata:
       labels:
