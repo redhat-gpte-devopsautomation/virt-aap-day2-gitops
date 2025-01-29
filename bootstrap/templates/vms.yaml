@@ -29,7 +29,7 @@ spec:
     name: u1.small
   preference:
     name: rhel.9
-  running: true
+  # running: true
   runStrategy: Manual
   template:
     metadata:
